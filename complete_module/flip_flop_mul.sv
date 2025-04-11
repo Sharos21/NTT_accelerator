@@ -1,6 +1,7 @@
 module flip_flop_miltiplier(
     input logic clk,
     input logic rst,
+    input logic enable,
     input logic [31:0] twiddle_factor,
     input logic [31:0] mul_data_in,
     output logic [31:0] result
@@ -15,7 +16,9 @@ tmp =  twiddle_factor * mul_data_in;
 end
 
 always_ff @(posedge clk) begin
+    if( enable) begin
     result<= tmp % modulus;
+    end
 end
 
 

@@ -36,13 +36,19 @@ logic [$clog2(counter_Max)-1:0] counter; // Counter
 //twiddle_factor
 logic [W-1:0] twiddle_factor;
 
+//flip flop_mul
+logic enable;
+
 
 //counting stages
 always_ff @(posedge clk) begin
     if (rst ) begin
         counter <=0;
-    end else begin
+    end else if (counter < counter_Max-1 ) begin
         counter <= counter +1 ;
+        enable <= 1;
+    end else begin
+         enable <=0;
     end
 end
 
@@ -122,13 +128,23 @@ mux mux_inst2(
     .mux_out(mux_output2)
 );
 
-flip_flop_miltiplier multiplier_inst(
+//flip_flop_miltiplier multiplier_inst(
+//    .clk(clk),
+//    .rst(rst),
+//    .enable(enable),
+//    .mul_data_in(mux_output2),
+//    .twiddle_factor(twiddle_factor),
+//    .result(final_result)
+//);
+
+mont_mul multiplexer_inst(
     .clk(clk),
     .rst(rst),
-    .mul_data_in(mux_output2),
-    .twiddle_factor(twiddle_factor),
-    .result(final_result)
+    .A(mux_output2),
+    .B(twiddle_factor),
+    .M(MODULUS),
+    .M_inv(8'd255),
+    .S(final_result)
 );
-
 
 endmodule

@@ -135,7 +135,7 @@ always_comb begin
 end
 
 
-assign enable = (counter < RADIX/2)? 0 : 1; 
+//assign enable = (counter < RADIX/2)? 0 : 1; 
 
 
 //Instasiate gia ton proto multiplexer
@@ -162,7 +162,7 @@ fifo_duth #(.DW(32), .DEPTH(FIFO_DEPTH)
 //Butterfly
 butterfly #(.MODULUS(MODULUS)
 ) butterfly_inst(
-    .enable(enable),
+    .enable(full),
     .buffer_data_in(buffer_data_out),
     .normal_data_in(incoming_data),
     .positive_data_out(butterfly_positive_data_out),
@@ -177,13 +177,23 @@ mux mux_inst2(
     .mux_out(mux_output2)
 );
 
-multiplier multiplier_inst(
+mont_mul multiplexer_inst(
     .clk(clk),
     .rst(rst),
-    .mul_data_in(mux_output2),
-    .twiddle_factor(twiddle_factor),
-    .result(final_result)
+    .A(mux_output2),
+    .B(twiddle_factor),
+    .M(MODULUS),
+    .M_inv(8'd255),
+    .S(final_result)
 );
+
+//multiplier multiplier_inst(
+//    .clk(clk),
+//    .rst(rst),
+//    .mul_data_in(mux_output2),
+//    .twiddle_factor(twiddle_factor),
+//    .result(final_result)
+//);
 
 
 endmodule
