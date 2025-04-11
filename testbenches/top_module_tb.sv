@@ -31,17 +31,16 @@ module top_module_tb;
         
 
         // Apply reset
-        #10 rst = 0; incoming_data = 32'd1;// First input
-
-        // Provide test data
+        #10 rst = 0; incoming_data = 32'd5569;// First input
+       // Provide test data
           
-        #10 incoming_data = 32'd2;  // Second input
-        #10 incoming_data = 32'd3;  // Third input
-        #10 incoming_data = 32'd4;  // Fourth input
-        #10 incoming_data = 32'd5;  // 5th
-        #10 incoming_data = 32'd6;  // 6th
-        #10 incoming_data = 32'd7;  // 7th
-        #10 incoming_data = 32'd8;  // 8th
+        #10 incoming_data = 32'd3457;  // Second input
+        #10 incoming_data = 32'd1345;  // Third input
+        #10 incoming_data = 32'd6914;  // Fourth input
+        #10 incoming_data = 32'd4802;  // 5th
+        #10 incoming_data = 32'd2690;  // 6th
+        #10 incoming_data = 32'd578;  // 7th
+        #10 incoming_data = 32'd6147;  // 8th
         #10 incoming_data = 32'd0;
         #10 incoming_data = 32'd0;
         #10 incoming_data = 32'd0;
@@ -53,7 +52,7 @@ module top_module_tb;
       
 
         // Wait for processing
-        #300;
+        #700;
 
         // End simulation
         $stop;
