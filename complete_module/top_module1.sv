@@ -5,7 +5,9 @@ module top_module1 #(parameter W = 32,
                     parameter FIFO_DEPTH = 4,
                     parameter step = 4,
                     parameter RADIX = 8,
-                    parameter [RADIX/2-1:0][W-1:0] TWIDDLE_ARRAY = '{32'd5756, 32'd4298, 32'd1213, 32'd1} // Twiddle factors
+                    parameter twiddle_buffer_depth = 8,
+                    parameter twiddle_increase = twiddle_buffer_depth/FIFO_DEPTH 
+                   // parameter [RADIX/2-1:0][W-1:0] TWIDDLE_ARRAY = '{32'd5756, 32'd4298, 32'd1213, 32'd1} // Twiddle factors
 )                                                                   
 (
     input logic clk,
@@ -41,7 +43,7 @@ logic [$clog2(counter_Max)-1:0] counter; // Counter
 //logic [$clog2(RADIX/2) > 0 ? $clog2(RADIX/2) - 1 : 0 : 0] twiddle_index;
 //logic [W-1:0] twiddle_array [0:RADIX/2-1]; // Twiddle factor array
 
-logic [$clog2(RADIX/2)-1 : 0] twiddle_index;
+logic [$clog2(twiddle_buffer_depth)-1 : 0] twiddle_index;
 logic [W-1:0] twiddle_factor;
 
 // Initialize twiddle_array from the parameter
@@ -62,12 +64,13 @@ always_ff @(posedge clk) begin
         twiddle_index <=0;
     end else begin
         counter <= counter +1 ;
-        if(case_sel == 2'd2) begin
-            twiddle_index <= twiddle_index+1;
+        if(case_sel == 2'd0) begin
+            twiddle_index <= twiddle_index + twiddle_increase; // isos na mporo na peraso to ena san parametro oste na kano sosto parse
         end else 
             twiddle_index <= 0;
     end
 end
+
 
 
 
@@ -82,29 +85,64 @@ always_ff @(posedge clk or posedge rst) begin
     end
 end
 
+logic [$clog2(step)-1:0] step_cnt;
+logic                   tgl_edge;
+
 always_comb begin
-    //if (counter >= counter_threshold) begin
+    if(rst) begin
+        case_sel = 2'd3;
+        step_cnt = 0;
+        tgl_edge =0;
+    end else begin
         
+            if(threshold_activation_count < step) begin
+                case_sel = 2'd3;
+            end else begin
+                step_cnt = counter;
+                tgl_edge = (step_cnt ==0) ? 1 : 0 ;
+                //if(step_cnt == 0) begin
+                //    tgl_edge = 1;
+                //end else begin
+                //    tgl_edge = 0;
+                //end
 
-        if (threshold_activation_count < step) begin
-            case_sel = 2'd3; // Default case
-        end else begin
-            // change between cases 
-            if (counter  % step == 0) begin
-                case_sel = (case_sel == 2'd1) ? 2'd2 : 2'd1; // Toggle between `1` and `2`
+                if (tgl_edge) begin
+                    case_sel = (case_sel == 2'd1) ? 2'd0 : 2'd1; // Toggle between `1` and `2`
+                end
             end
-        end
-
-    //end else begin
-    //    case_sel = 2'd3; // Default case before threshold
-    //end
+        
+    end
 end
 
+
+//always_comb begin
+//    //if (counter >= counter_threshold) begin
+//        
+//
+//        if (threshold_activation_count < step) begin
+//            case_sel = 2'd3; // Default case
+//        end else begin
+//            // change between cases 
+//            if (counter  % step == 0) begin
+//                case_sel = (case_sel == 2'd1) ? 2'd0 : 2'd1; // Toggle between `1` and `2`
+//            end
+//        end
+//
+//    //end else begin
+//    //    case_sel = 2'd3; // Default case before threshold
+//    //end
+//end
+
+//Instatiation of rom for each top_module
+twiddle_rom #(.W(W), .DEPTH(twiddle_buffer_depth)) twiddle_rom_inst (
+    .addr(twiddle_index),
+    .data(twiddle_factor)
+  );
 
 always_comb begin
     case (case_sel)
         default: begin 
-                twiddle_factor = TWIDDLE_ARRAY[twiddle_index];
+                //twiddle_factor = TWIDDLE_ARRAY[twiddle_index];
                 if(counter < counter_threshold) begin
                     pop = 1'b1;
                 end else begin
@@ -116,16 +154,16 @@ always_comb begin
                 sel2 = 1'b1;
         end
 
-        2'd1: begin
-                twiddle_factor = TWIDDLE_ARRAY[twiddle_index];
+        2'd1: begin // i katastasi 1 
+                //twiddle_factor = TWIDDLE_ARRAY[twiddle_index];
                 push = 1'b1;
                 pop = 1'b1;
                 sel1 = 1'b1;
                 sel2 = 1'b1;
         end
 
-        2'd2: begin // o katastasi 2 einai i katastasi pou exo 0 aplos epeidi kano tin not pano na enallasei se binary anameso sto 1 kai to 2
-            twiddle_factor = TWIDDLE_ARRAY[twiddle_index]; 
+        2'd0: begin //  i katastasi pou exo 0 aplos 
+            //twiddle_factor = TWIDDLE_ARRAY[twiddle_index]; 
             push = 1'b1;
             pop = 1'b1;
             sel1 = 1'b0;

@@ -1,7 +1,8 @@
 module top_module3 #(parameter W = 32,
                     parameter MODULUS= 7681,
-                     parameter RADIX = 8,
-                     parameter counter_Max=8)
+                    parameter RADIX = 8,
+                    parameter counter_Max=8,
+                    parameter twiddle_buffer_depth = 8)
 (
     input logic clk,
     input logic rst,
@@ -34,6 +35,7 @@ logic [$clog2(counter_Max)-1:0] counter; // Counter
 //////////////
 
 //twiddle_factor
+logic [$clog2(twiddle_buffer_depth)-1 : 0] twiddle_index;
 logic [W-1:0] twiddle_factor;
 
 //flip flop_mul
@@ -63,22 +65,29 @@ always_ff @(posedge clk) begin
     end
 end
 
+twiddle_rom #(.W(W), .DEPTH(twiddle_buffer_depth)) twiddle_rom_inst (
+    .addr(twiddle_index),
+    .data(twiddle_factor)
+  );
+
+assign twiddle_index =0; // gia na pernei panta to ω^0
+
 always_comb begin
     if (counter >= RADIX - 2) begin
         if (counter == RADIX - 2) begin
-            twiddle_factor = 32'd1;
+            //twiddle_factor = 32'd1; // auto prepei na allaxei gia na einai se montgomery form omos to afino etsi gia na exo kanonikopoiimeni exodo
             push = 1'b1;
             pop = 1'b0;
             sel1 = 1'b0;
             sel2 = 1'b1;
         end else if (switch == 1'b0) begin
-            twiddle_factor = 32'd1;
+            //twiddle_factor = 32'd1; // auto prepei na allaxei gia na einai se montgomery form
             push = 1'b1;
             pop =  1'b1;
             sel1 = 1'b1;
             sel2 = 1'b1;
         end else if (switch == 1'b1) begin
-            twiddle_factor = 32'd1;
+            //twiddle_factor = 32'd1; // auto prepei na allaxei gia na einai se montgomery form
             push = 1'b1;
             pop = 1'b1;
             sel1 = 1'b0;
