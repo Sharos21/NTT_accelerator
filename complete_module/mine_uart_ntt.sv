@@ -87,7 +87,7 @@ always_ff @(posedge clk) begin
   if(rst) begin
     uart_twiddle_buffer_index <=0;
     uart_buffer_full <=0;
-  end else if (uart_ready_s && !uart_buffer_full && !done) begin
+  end else if (uart_ready_s && !uart_buffer_full) begin
     uart_twiddle_buffer[uart_twiddle_buffer_index] <= uart_data_s;
     uart_twiddle_buffer_index <= uart_twiddle_buffer_index +1 ;
     if( uart_twiddle_buffer_index  == radix/2-1) 
@@ -113,7 +113,7 @@ always_ff @(posedge clk) begin
     write_data_array <= '0;
     write_addr_array <= '0;
     j_counter <= 0;
-  end else if (uart_buffer_full && !full_ram[stage] && !done) begin
+  end else if (uart_buffer_full && !full_ram[stage]) begin
     write_enable_array <= '0; // reset enables each cycle
     if(j_counter < index) begin
       write_enable_array[stage] <= 1;
@@ -141,7 +141,7 @@ always_ff @(posedge clk) begin
   if(rst) begin
     uart_data_buffer_index <=0;
     uart_data_buffer_full <= 0;
-  end else if(uart_buffer_full && uart_ready_s && !uart_data_buffer_full && !done) begin
+  end else if(uart_buffer_full && uart_ready_s && !uart_data_buffer_full) begin
     uart_data_buffer[uart_data_buffer_index] <= uart_data_s;
     uart_data_buffer_index <= uart_data_buffer_index + 1;
       if(uart_data_buffer_index == radix -1)
@@ -166,9 +166,7 @@ always_ff @(posedge clk) begin
     start <=1;
     incoming_data <= uart_data_buffer[data_index];
     data_index <= data_index +1;
-  end else 
-    start<=0;
-
+  end 
 end
 
 

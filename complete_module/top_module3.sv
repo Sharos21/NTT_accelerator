@@ -177,6 +177,7 @@ mont_mul multiplexer_inst(
     .B(twiddle_factor),
     .M(MODULUS),
     .M_inv(8'd255),
+    .enable(done),
     .S(final_result)
 );
 

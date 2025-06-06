@@ -5,6 +5,7 @@ module mont_mul #(parameter W = 32, M_BITS = 8, N = W/M_BITS)(
     input logic [W-1:0] B, // twiddle_factor in Montgomery form
     input logic [W-1:0] M, // MODULUS
     input logic [M_BITS-1:0] M_inv, // M' = -M^(-1) mod R
+    input logic enable,
     output logic [W-1:0] S
 
 );
@@ -74,7 +75,7 @@ for (k=1; k < N; k++) begin
 endgenerate
 
 
-assign S = (stage_reg[N-1].s_prev < M) ? stage_reg[N-1].s_prev : 
+assign S = (enable) ? 'd0 :  (stage_reg[N-1].s_prev < M) ? stage_reg[N-1].s_prev : 
                                     (stage_reg[N-1].s_prev - M);
 
 

@@ -1,7 +1,7 @@
 module butterfly#(
     parameter MODULUS = 7681
 )(
-    input logic enable, // New enable signal
+    input logic enable, 
     input logic [31:0] buffer_data_in,
     input logic [31:0] normal_data_in,
     output logic [31:0] positive_data_out,
