@@ -10,6 +10,7 @@ module top_top_module #(parameter W =32,radix = 16 ,NUM_stages = $clog2(radix) -
     //input logic [W-1:0] twiddle_factor,
     output logic [W-1:0] final_result,
     output logic done,
+    output logic valid,
     output logic [NUM_stages:0] full_ram
 );
 
@@ -30,6 +31,8 @@ generate
 //assign counter_thr = (i==0)? 0 : (i*8) + 4;
 
 
+
+
 top_module1 #(.W(W), .MODULUS(7681), .counter_Max(radix*2), .counter_threshold((i == 0) ? 0 : (radix/2 + 4*i)),
                .FIFO_DEPTH(radix >> (i + 1)), .step(radix >> (i + 1)), .RADIX(radix), .twiddle_buffer_depth(radix >> (i + 1)))// .twiddle_increase(1)) //.TWIDDLE_ARRAY('{32'd5345, 32'd2351, 32'd4266, 32'd1566, 32'd1061, 32'd3598, 32'd6960, 32'd5569}) ) //32'd5345, 32'd2351, 32'd4266, 32'd1566, 32'd1061, 32'd3598, 32'd6960, 32'd5569
     top_inst(
@@ -39,7 +42,8 @@ top_module1 #(.W(W), .MODULUS(7681), .counter_Max(radix*2), .counter_threshold((
     .start(start),
     .write_en(write_en_array[i]),
     .write_data(write_data_array[i]),
-    .write_addr(write_addr_array[i][($clog2(radix >> (i + 1)) - 1) : 0]),
+    .write_addr(write_addr_array[i][$clog2(radix>>(i+1))-1:0]),
+    .done(done),
     //.twiddle_factor(twiddle_factor),
     .final_result(stage_results[i+1]),
     .full_ram(full_ram[i])
@@ -94,6 +98,27 @@ top_module3 #(.W(W), .MODULUS(7681), .RADIX(radix), .counter_Max(radix*2), .twid
     .final_result(final_result),
     .full_ram(full_ram[NUM_stages])
 );
+
+localparam int VALID_THRESH = calc_valid_thresh(radix, NUM_stages);
+
+function automatic int calc_valid_thresh(input int radix, input int num_stages);
+    int total = 0;
+    for (int i = 0; i < num_stages + 1; i++) begin
+        total += 4 + (radix >> (i + 1));
+    end
+    return total;
+endfunction
+
+int valid_counter;
+
+always_ff @(posedge clk) begin
+    if (rst) begin
+        valid_counter <= 0;
+    end else if (start) begin
+        valid_counter <= valid_counter + 1;
+    end
+end
+assign valid = (!done && valid_counter>= VALID_THRESH) ? 1: 0;
 
 endmodule
 

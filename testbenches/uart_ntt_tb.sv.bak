@@ -175,7 +175,7 @@ always_ff @(posedge clk) begin
 
     $display("Simulation 1 complete. Final result: %h", final_result);
 
-
+/*
     rst = 1;
     tx_data = 0;
     tx_dv = 0;
@@ -201,7 +201,7 @@ always_ff @(posedge clk) begin
     #(200000 * CLK_PERIOD);
 
     $display("Simulation 2  complete. Final result: %h", final_result);
-    
+    */
     $stop;
   end
 

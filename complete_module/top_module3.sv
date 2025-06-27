@@ -46,7 +46,7 @@ logic twiddle_index;
 logic [W-1:0] twiddle_factor;
 
 //flip flop_mul
-logic enable;
+//logic enable;
 //done_counter
 logic [$clog2(counter_Max):0] done_counter;
 
@@ -81,6 +81,7 @@ end
 
 twiddle_ram #(.W(W), .DEPTH(1)) twiddle_ram_inst (
     .clk(clk),
+    .rst(rst),
     .read_addr(twiddle_index),
     .read_data(twiddle_factor),
     .write_addr(write_addr),
@@ -92,6 +93,11 @@ twiddle_ram #(.W(W), .DEPTH(1)) twiddle_ram_inst (
 assign twiddle_index =0; // gia na pernei panta to ω^0
 
 always_comb begin
+
+    push = 1'b0;
+    pop = 1'b0;
+    sel1 = 1'b0;
+    sel2 = 1'b0;
     if (counter >= RADIX - 2 && !done) begin
         if (counter == RADIX - 2) begin
             //twiddle_factor = 32'd1; // auto prepei na allaxei gia na einai se montgomery form omos to afino etsi gia na exo kanonikopoiimeni exodo

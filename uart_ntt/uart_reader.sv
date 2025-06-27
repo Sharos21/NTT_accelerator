@@ -12,7 +12,7 @@ module uart_reader (
   input  logic       uart_valid_i
 );
 
-enum logic [1:0] {INIT , BYTE_RCVD, DATA_RDY, DONE=4'b11} st_s;
+enum logic [1:0] {INIT , BYTE_RCVD, DATA_RDY, DONE=2'b11} st_s;
 
 logic[31:0]     status_ninstr_s;
 logic[31:0]     status_start_addr_s;

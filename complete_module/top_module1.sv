@@ -17,9 +17,14 @@ module top_module1 #(parameter W = 32,
     input logic write_en,
     input logic[$clog2(twiddle_buffer_depth)-1:0] write_addr,
     input logic [W-1:0] write_data,
+    input logic done,
     output logic [W-1:0] final_result,
     output logic full_ram
 );
+
+
+
+
 
 ///Buffer/////
 logic [W-1:0] buffer_data_in;
@@ -44,37 +49,17 @@ logic sel2;
 logic [$clog2(counter_Max)-1:0] counter; // Counter
 //////////////
 
-// Twiddle factor logic
-//logic [$clog2(RADIX/2) > 0 ? $clog2(RADIX/2) - 1 : 0 : 0] twiddle_index;
-//logic [W-1:0] twiddle_array [0:RADIX/2-1]; // Twiddle factor array
 
 logic [$clog2(twiddle_buffer_depth)-1 : 0] twiddle_index;
 logic [W-1:0] twiddle_factor;
 
-// Initialize twiddle_array from the parameter
-//generate
-//    genvar i;
-//    for (i = 0; i < RADIX/2; i = i + 1) begin
-//        assign twiddle_array[i] = TWIDDLE_ARRAY[i];
-//    end
-//endgenerate
-
-// to change between the cases
-logic [1:0] case_sel;
 
 
 always_ff @(posedge clk) begin
-    if (rst || !start ) begin 
-        counter <=0;
-        twiddle_index <=0;
-    end else begin
-        counter <= counter +1 ;
-        if(case_sel == 2'd0) begin
-            twiddle_index <= twiddle_index + 1; //twiddle_increase; // isos na mporo na peraso to ena san parametro oste na kano sosto parse
-        end else 
-            twiddle_index <= 0;
-    end
-end
+    if (rst)            counter <= 0;
+    else if (!start)    counter <= 0;
+    else                counter <= counter + 1;
+  end
 
 
 
@@ -90,55 +75,94 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic [$clog2(step)-1:0] step_cnt;
-logic                   tgl_edge;
 
-always_comb begin
-    if(rst) begin
-        case_sel = 2'd3;
-        step_cnt = 0;
-        tgl_edge =0;
-    end else if(!start) begin
-        case_sel <= 2'd2;
-        step_cnt = 0;
-        tgl_edge =0;
+  localparam int STEP_WIDTH = $clog2(step);
+  wire step_max ;
+  assign step_max = &counter[STEP_WIDTH-1:0];  // reduction AND
+  logic tgl_edge, tgl_edge_d;
+
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      tgl_edge_d <= 1'b0;
+      tgl_edge   <= 1'b0;
     end else begin
-        // making astimulus every steps cycles to change to toggle between cases
-            if(threshold_activation_count < step) begin
-                case_sel = 2'd3;
-            end else begin
-                step_cnt = counter;
-                tgl_edge = (step_cnt ==0) ? 1 : 0 ;
-                if (tgl_edge) begin
-                    case_sel = (case_sel == 2'd1) ? 2'd0 : 2'd1; // Toggle between `1` and `2`
-                end
-            end
-        
+      tgl_edge_d <= step_max;
+      tgl_edge   <= step_max && !tgl_edge_d;
     end
-end
+  end
+
+logic [1:0] case_sel, next_case_sel;
+
+always_ff @(posedge clk or posedge rst) begin
+    if (rst) case_sel <= 2'd3;
+    else     case_sel <= next_case_sel;
+  end
+
+  // Combinational next-state + outputs
+  always_comb begin
+    // default next-state
+    next_case_sel = case_sel;
+
+    // calculate next_case_sel
+    if (!start) begin
+      next_case_sel = 2'd2;
+    end else if (threshold_activation_count < step) begin
+      next_case_sel = 2'd3;
+    end else begin
+      if (tgl_edge)
+        next_case_sel = (case_sel == 2'd1) ? 2'd0 : 2'd1;
+      else
+        next_case_sel = case_sel;
+    end
+
+    // default outputs
+    push = 1'b0; 
+    if (counter < counter_threshold) begin
+      pop = 1'b1;
+    end else begin
+    pop = 1'b0; 
+    end
+    sel1 = 1'b0; sel2 = 1'b0;
+    case (next_case_sel)
+      2'd3: begin
+        push = 1'b1;
+        sel2 = 1'b1;
+      end
+      2'd2: begin
+        // all zeros
+      end
+      2'd1: begin
+        push = 1'b1;
+        pop  = 1'b1;
+        sel1 = 1'b1;
+        sel2 = 1'b1;
+      end
+      2'd0: begin
+        push = 1'b1;
+        pop  = 1'b1;
+      end
+    endcase
+  end
+
+  // ------------------------------------------------------------------
+  // 5) Twiddle index update
+  // ------------------------------------------------------------------
+  //logic [$clog2(twiddle_buffer_depth)-1:0] next_twiddle_index;
+  always_ff @(posedge clk ) begin
+    if (rst) twiddle_index <= 0;
+    else if (next_case_sel == 2'd0)
+      twiddle_index <= twiddle_index + 1;
+    else
+      twiddle_index <= 0;
+  end
+  
 
 
-//always_comb begin
-//    //if (counter >= counter_threshold) begin
-//        
-//
-//        if (threshold_activation_count < step) begin
-//            case_sel = 2'd3; // Default case
-//        end else begin
-//            // change between cases 
-//            if (counter  % step == 0) begin
-//                case_sel = (case_sel == 2'd1) ? 2'd0 : 2'd1; // Toggle between `1` and `2`
-//            end
-//        end
-//
-//    //end else begin
-//    //    case_sel = 2'd3; // Default case before threshold
-//    //end
-//end
 
 //Instatiation of rom for each top_module
 twiddle_ram #(.W(W), .DEPTH(twiddle_buffer_depth)) twiddle_ram_inst (
     .clk(clk),
+    .rst(rst),
     .read_addr(twiddle_index),
     .read_data(twiddle_factor),
     .write_addr(write_addr),
@@ -147,6 +171,7 @@ twiddle_ram #(.W(W), .DEPTH(twiddle_buffer_depth)) twiddle_ram_inst (
     .full_ram(full_ram)
   );
 
+/*
 always_comb begin
     case (case_sel)
         default: begin 
@@ -156,7 +181,12 @@ always_comb begin
                 end else begin
                     pop = 1'b0;
                 end
+
+                if(rst) begin
+                push = 1'b0;
+                end else begin
                 push = 1'b1;
+                end
                 //pop =  1'b0;
                 sel1 = 1'b0;
                 sel2 = 1'b1;
@@ -186,9 +216,7 @@ always_comb begin
         end
     endcase
 end
-
-
-//assign enable = (counter < RADIX/2)? 0 : 1; 
+*/
 
 
 //Instasiate gia ton proto multiplexer
