@@ -64,6 +64,21 @@ logic [NUM_stages-1:0][W-1:0] write_data_array;
 logic [NUM_stages-1:0][ADDR_WIDTH-1:0] write_addr_array;
 
 
+logic [31:0] cycle_counter;
+logic [31:0] final_counter;
+
+
+always_ff @(posedge clk) begin
+    if(rst) begin
+        cycle_counter <=0;
+        final_counter <= 0;
+     end else if (start && !done) begin
+        cycle_counter <=cycle_counter +1;
+       end else if (done) begin
+        final_counter <= cycle_counter;
+       end
+end
+
 
 top_top_module #(.W(W), .radix(radix)) uut  ( 
         .clk(clk),
@@ -190,7 +205,7 @@ logic tx_active;
 typedef enum logic [1:0] {IDLE, PREPARE, WAIT_TX_DONE, NEXT} tx_state_t;
 
 tx_state_t tx_state;
-logic [$clog2(radix)-1:0] tx_word_index;
+logic [$clog2(radix):0] tx_word_index;
 logic [1:0] tx_byte_index;
 
 always_ff @(posedge clk) begin
@@ -205,7 +220,7 @@ always_ff @(posedge clk) begin
 
     case (tx_state)
     IDLE: begin
-      if(done && tx_word_index != radix -1 ) begin
+      if(done && tx_word_index != radix ) begin
         tx_word_index <=0;
         tx_byte_index <=0;
         tx_state <= PREPARE;
@@ -214,10 +229,10 @@ always_ff @(posedge clk) begin
 
     PREPARE: begin
       case(tx_byte_index)
-          2'd0: tx_data <= output_buffer[tx_word_index][7:0];
-          2'd1: tx_data <= output_buffer[tx_word_index][15:8];
-          2'd2: tx_data <= output_buffer[tx_word_index][23:16];
-          2'd3: tx_data <= output_buffer[tx_word_index][31:24];
+          2'd0: tx_data <= (tx_word_index < radix) ? output_buffer[tx_word_index][7:0]      : final_counter[7:0];
+          2'd1: tx_data <= (tx_word_index < radix) ? output_buffer[tx_word_index][15:8]     : final_counter[15:8];
+          2'd2: tx_data <= (tx_word_index < radix) ? output_buffer[tx_word_index][23:16]    : final_counter[23:16];
+          2'd3: tx_data <= (tx_word_index < radix) ? output_buffer[tx_word_index][31:24]    : final_counter[31:24];
       endcase
       tx_start <= 1;
       tx_state <= WAIT_TX_DONE;
@@ -235,7 +250,7 @@ always_ff @(posedge clk) begin
         tx_state <= PREPARE;
       end else begin
         tx_byte_index<=0;
-        if(tx_word_index < radix-1) begin
+        if(tx_word_index < radix) begin
           tx_word_index <= tx_word_index + 1;
           tx_state <= PREPARE;
         end else begin
